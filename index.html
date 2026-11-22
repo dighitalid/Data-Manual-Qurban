@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Form Order Qurban 2027</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #0d1733; margin: 0; padding: 16px; color: #e6ecff; }
+  .card { max-width: 520px; margin: auto; background: #1a2550; padding: 20px; border-radius: 12px; }
+  h2 { margin-top: 0; }
+  label { display: block; margin-top: 12px; font-weight: bold; font-size: 13px; color: #aab6dd; }
+  input, select, textarea { width: 100%; padding: 9px; margin-top: 4px; box-sizing: border-box; background: #0d1733; color: #e6ecff; border: 1px solid #2b3a6b; border-radius: 6px; font-size: 15px; }
+  textarea.tempel { font-size: 13px; }
+  .row2 { display: flex; gap: 8px; }
+  .row2 > div { flex: 1; }
+  button { width: 100%; padding: 12px; margin-top: 12px; border: 0; border-radius: 8px; background: #2f6fe0; color: #fff; font-size: 16px; cursor: pointer; }
+  button:disabled { background: #666; }
+  .btn2 { background: #2b3a6b; }
+  .btn-green { background: #2ec59a; color: #063; font-weight: bold; }
+  .box-tempel { background: #0d1733; border: 1px dashed #2f6fe0; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+  .box-tempel p { margin: 0 0 6px; font-size: 13px; color: #aab6dd; }
+  .info { color: #8fe0c0; font-size: 13px; margin-top: 8px; }
+  .msg { color: #ff8a9b; font-size: 14px; margin-top: 8px; }
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none; align-items: center; justify-content: center; padding: 16px; }
+  .modal.show { display: flex; }
+  .box { background: #1a2550; padding: 20px; border-radius: 12px; max-width: 420px; width: 100%; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  td { padding: 6px 4px; border-bottom: 1px solid #2b3a6b; vertical-align: top; }
+  td:first-child { color: #aab6dd; width: 40%; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h2>Form Order Qurban 2027</h2>
+
+  <div class="box-tempel">
+    <p>Tempel pesan order dari WhatsApp di sini (opsional):</p>
+    <textarea id="tempel" class="tempel" rows="4" placeholder="Nama Pengurban: ...&#10;No WhatsApp: ...&#10;Email: ...&#10;Paket Qurban: ...&#10;Total Pembayaran: Rp ..."></textarea>
+    <button class="btn2" id="btnIsiOtomatis">Isi Otomatis</button>
+  </div>
+
+  <form id="f">
+    <label>Paket Qurban</label>
+    <select id="paket"></select>
+
+    <label>Nama Pengurban (bin/binti)</label>
+    <input id="nama" placeholder="Contoh: Sri Atika Mayadah binti Suhada">
+
+    <div class="row2">
+      <div><label>CS</label><input id="cs" placeholder="OPI"></div>
+      <div><label>No. WhatsApp</label><input id="wa" placeholder="085787085979"></div>
+    </div>
+
+    <label>Email</label>
+    <input id="email" type="email">
+
+    <div class="row2">
+      <div><label>Jumlah (EKOR)</label><input id="ekor" type="number" min="1" value="1"></div>
+      <div><label>Harga / ekor (Rp)</label><input id="harga" type="number" readonly></div>
+    </div>
+
+    <label>Total Pembayaran (Rp)</label>
+    <input id="total" type="number">
+
+    <div class="row2">
+      <div><label>Status Pembayaran</label>
+        <select id="status"><option value="LUNAS">LUNAS</option><option value="DP">DP</option></select>
+      </div>
+      <div><label>Jumlah Dibayar (Rp)</label><input id="dibayar" type="number"></div>
+    </div>
+
+    <label>Tanggal Bayar</label>
+    <input id="tglBayar" type="date">
+
+    <label>Keterangan</label>
+    <textarea id="ket" rows="2"></textarea>
+
+    <div class="info" id="info"></div>
+    <div class="msg" id="msg"></div>
+    <button type="submit">Lanjut ke Konfirmasi</button>
+  </form>
+</div>
+
+<div class="modal" id="modal">
+  <div class="box">
+    <h3 style="margin-top:0">Konfirmasi Data</h3>
+    <div id="ringkas"></div>
+    <button class="btn2" id="btnEdit">← Edit Data</button>
+    <button class="btn-green" id="btnSimpan">Konfirmasi &amp; Simpan</button>
+  </div>
+</div>
+
+<script>
+const API = 'PASTE_URL_WEB_APP_DI_SINI';
+const PROMO_AKTIF = true;
+
+const PAKET = {};
+for (const b of ['BQ', 'PN']) {
+  PAKET[b + '-KAMBING']      = { brand: b, nama: 'Kambing Sebar Qurban',              normal: 1499000,  promo: 1299000, tab: 'MANUAL ' + b };
+  PAKET[b + '-1/7-SAPI']     = { brand: b, nama: 'Patungan 1/7 Sapi Sebar Indonesia', normal: 1850000,  promo: null,    tab: '1/7 SAPI' };
+  PAKET[b + '-AFR-KAMBING']  = { brand: b, nama: 'Sebar Qurban Afrika Kambing',      normal: 1249000,  promo: null,    tab: 'AFRIKA ' + b };
+  PAKET[b + '-AFR-1/7-SAPI'] = { brand: b, nama: 'Patungan 1/7 Sapi Afrika',         normal: 1440000,  promo: null,    tab: 'AFRIKA ' + b };
+  PAKET[b + '-AFR-SAPI']     = { brand: b, nama: 'Sapi Sebar Qurban Afrika',         normal: 10000000, promo: null,    tab: 'AFRIKA ' + b };
+}
+const NAMA_BRAND = { BQ: 'Bank Qurban', PN: 'Peternak Nusantara' };
+
+const hargaAktif = p => (PROMO_AKTIF && p.promo) ? p.promo : p.normal;
+const $ = id => document.getElementById(id);
+const rupiah = n => 'Rp ' + Number(n || 0).toLocaleString('id-ID');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+let CACHE = [];   // data order lama dari spreadsheet, untuk lookup nomor WA
+
+for (const [kode, p] of Object.entries(PAKET)) {
+  const label = `${p.nama} – ${NAMA_BRAND[p.brand]}` +
+    ((PROMO_AKTIF && p.promo) ? ` (PROMO ${rupiah(p.promo)}, normal ${rupiah(p.normal)})` : ` (${rupiah(p.normal)})`);
+  $('paket').add(new Option(label, kode));
+}
+
+// Tanggal bayar otomatis hari ini
+$('tglBayar').value = new Date().toISOString().slice(0, 10);
+
+// ---------- HARGA ----------
+function hitungHarga() {
+  const harga = hargaAktif(PAKET[$('paket').value]);
+  $('harga').value = harga;
+  $('total').value = harga * (Number($('ekor').value) || 1);
+  hitungDibayar();
+}
+function hitungDibayar() {
+  if ($('status').value === 'LUNAS') $('dibayar').value = $('total').value;
+}
+$('paket').addEventListener('change', hitungHarga);
+$('ekor').addEventListener('input', hitungHarga);
+$('status').addEventListener('change', hitungDibayar);
+$('total').addEventListener('input', hitungDibayar);
+
+// ---------- LOOKUP NOMOR WA ----------
+const normWA = s => {
+  let d = String(s || '').replace(/\D/g, '');
+  if (d.startsWith('62')) d = d.slice(2);
+  if (d.startsWith('0')) d = d.slice(1);
+  return d;
+};
+
+async function muatCache() {
+  try {
+    const r = await fetch(API);
+    const j = await r.json();
+    if (j.ok) CACHE = j.data;
+  } catch (e) { /* lookup dilewati jika gagal */ }
+}
+
+function isiDariRiwayat() {
+  const k = normWA($('wa').value);
+  if (k.length < 8) return false;
+  const found = CACHE.slice().reverse().find(d => normWA(d.wa) === k);
+  if (!found) return false;
+  if (!$('nama').value) $('nama').value = found.nama;
+  if (!$('email').value) $('email').value = found.email || '';
+  if (!$('cs').value) $('cs').value = found.cs || '';
+  $('info').textContent = `Data konsumen lama ditemukan (${found.nama}), sebagian kolom diisi otomatis.`;
+  return true;
+}
+$('wa').addEventListener('change', isiDariRiwayat);
+
+// ---------- TEMPEL PESAN WA ----------
+function ambilNilai(lines, kunci) {
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(/^([^:]+):\s*(.*)$/);
+    if (!m) continue;
+    const label = m[1].toLowerCase();
+    if (!kunci.some(k => label.includes(k))) continue;
+    let v = m[2].replace(/\*/g, '').trim();
+    if (!v) {
+      for (let j = i + 1; j < lines.length; j++) {
+        const t = lines[j].replace(/\*/g, '').trim();
+        if (t) return t;
+      }
+    }
+    return v;
+  }
+  return '';
+}
+
+function tebakPaket(teks) {
+  const t = teks.toLowerCase();
+  const brand = (t.includes('peternak') || /\bpn\b/.test(t)) ? 'PN' : 'BQ';
+  let tipe = null;
+  if (t.includes('afrika')) {
+    if (t.includes('1/7')) tipe = 'AFR-1/7-SAPI';
+    else if (t.includes('sapi')) tipe = 'AFR-SAPI';
+    else tipe = 'AFR-KAMBING';
+  } else if (t.includes('1/7')) {
+    tipe = '1/7-SAPI';
+  } else if (t.includes('kambing')) {
+    tipe = 'KAMBING';
+  }
+  return tipe ? brand + '-' + tipe : null;
+}
+
+$('btnIsiOtomatis').addEventListener('click', () => {
+  const teks = $('tempel').value;
+  if (!teks.trim()) { $('msg').textContent = 'Tempel pesan order dulu.'; return; }
+
+  const lines = teks.split('\n')
+    .map(l => l.replace(/^[\s>*]+/, '').trim())
+    .filter(Boolean);
+
+  const nama  = ambilNilai(lines, ['nama']);
+  const wa    = ambilNilai(lines, ['whatsapp', 'no. hp', 'no hp']);
+  const email = ambilNilai(lines, ['email']);
+  const paket = ambilNilai(lines, ['paket']);
+  const totalTxt = ambilNilai(lines, ['total']);
+
+  if (nama)  $('nama').value = nama;
+  if (wa)    $('wa').value = wa.replace(/[^\d+]/g, '');
+  if (email) $('email').value = email.replace(/\s/g, '');
+
+  const kode = tebakPaket(paket + ' ' + teks);
+  if (kode && PAKET[kode]) $('paket').value = kode;
+
+  const ekorMatch = teks.match(/(\d+)\s*ekor/i);
+  if (ekorMatch) $('ekor').value = ekorMatch[1];
+
+  hitungHarga();
+
+  const total = Number(totalTxt.replace(/\D/g, ''));
+  if (total > 0) {
+    $('total').value = total;
+    hitungDibayar();
+  }
+
+  const adaRiwayat = isiDariRiwayat();
+  $('info').textContent = 'Data diisi otomatis dari pesan. Periksa kembali sebelum disimpan.' +
+    (adaRiwayat ? '' : '');
+  $('msg').textContent = '';
+});
+
+// ---------- SUBMIT ----------
+function ambilData() {
+  const p = PAKET[$('paket').value];
+  const t = $('tglBayar').value;
+  let tglFmt = '';
+  if (t) { const [y, m, d] = t.split('-'); tglFmt = `${d}/${m}/${y.slice(2)}`; }
+  return {
+    action: 'create',
+    brand: p.brand,
+    tab: p.tab,
+    produk: NAMA_BRAND[p.brand],
+    paket: p.nama,
+    nama: $('nama').value.trim(),
+    cs: $('cs').value.trim(),
+    wa: $('wa').value.trim(),
+    email: $('email').value.trim(),
+    ekor: Number($('ekor').value),
+    harga: Number($('harga').value),
+    total: Number($('total').value),
+    status: $('status').value,
+    dibayar: Number($('dibayar').value),
+    tanggal: tglFmt,
+    ket: $('ket').value.trim()
+  };
+}
+
+$('f').addEventListener('submit', e => {
+  e.preventDefault();
+  const d = ambilData();
+  if (!d.nama || !d.wa) { $('msg').textContent = 'Nama dan No. WhatsApp wajib diisi.'; return; }
+  $('msg').textContent = '';
+  $('ringkas').innerHTML = `<table>
+    <tr><td>Brand</td><td>${esc(NAMA_BRAND[d.brand])}</td></tr>
+    <tr><td>Paket</td><td>${esc(d.paket)}</td></tr>
+    <tr><td>Nama</td><td>${esc(d.nama)}</td></tr>
+    <tr><td>CS</td><td>${esc(d.cs)}</td></tr>
+    <tr><td>No. WA</td><td>${esc(d.wa)}</td></tr>
+    <tr><td>Email</td><td>${esc(d.email)}</td></tr>
+    <tr><td>Jumlah</td><td>${d.ekor} ekor</td></tr>
+    <tr><td>Total</td><td>${rupiah(d.total)}</td></tr>
+    <tr><td>Status</td><td>${esc(d.status)}</td></tr>
+    <tr><td>Dibayar</td><td>${rupiah(d.dibayar)}</td></tr>
+    <tr><td>Tanggal Bayar</td><td>${esc(d.tanggal)}</td></tr>
+    <tr><td>Keterangan</td><td>${esc(d.ket)}</td></tr>
+  </table>`;
+  $('modal').classList.add('show');
+});
+
+$('btnEdit').addEventListener('click', () => $('modal').classList.remove('show'));
+
+$('btnSimpan').addEventListener('click', async () => {
+  const btn = $('btnSimpan');
+  btn.disabled = true; btn.textContent = 'Menyimpan...';
+  try {
+    const data = ambilData();
+    const res = await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(data)
+    });
+    const out = await res.json();
+    if (!out.ok) throw new Error(out.error);
+    alert(`Tersimpan di tab ${data.tab} (baris ${out.row}).`);
+    $('f').reset();
+    $('tempel').value = '';
+    $('info').textContent = '';
+    $('tglBayar').value = new Date().toISOString().slice(0, 10);
+    hitungHarga();
+    $('modal').classList.remove('show');
+    muatCache();
+  } catch (err) {
+    alert('Gagal menyimpan: ' + err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Konfirmasi & Simpan';
+  }
+});
+
+hitungHarga();
+muatCache();
+</script>
+</body>
+</html>
